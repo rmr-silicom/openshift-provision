@@ -333,6 +333,9 @@ while ! $(oc get nodes | grep -q worker1) ; do
 done
 
 # $OC apply -f ${BASE}/files/silicom-registry.yaml
-# $OC apply -f ${BASE}/files/nfd-daemonset.yaml
 
 cp -av $KUBECONFIG ~/.kube/
+
+sleep 60
+
+$OC apply -f ${BASE}/files/nfd-daemonset.yaml
