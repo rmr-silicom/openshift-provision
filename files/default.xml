@@ -1,0 +1,52 @@
+<network>
+  <name>default</name>
+  <uuid>9a05da11-e96b-47f3-8253-a3a482e445f5</uuid>
+  <forward mode='nat'/>
+  <bridge name='virbr0' stp='on' delay='0'/>
+  <mac address='52:54:00:0a:cd:21'/>
+  <domain name="openshift.local" localOnly="no"/>
+  <dns>
+    <host ip='192.168.122.9'>
+      <hostname>api-int.openshift.local</hostname>
+      <hostname>api.openshift.local</hostname>
+      <hostname>lb.openshift.local</hostname>
+      <hostname>*.apps.openshift.local</hostname>
+      <hostname>console-openshift-console.apps.openshift.local</hostname>
+      <hostname>oauth-openshift.apps.openshift.local</hostname>
+    </host>
+    <host ip='192.168.122.2'>
+      <hostname>bootstrap.openshift.local</hostname>
+    </host>
+    <host ip='192.168.122.3'>
+      <hostname>master1.openshift.local</hostname>
+    </host>
+    <host ip='192.168.122.4'>
+      <hostname>master2.openshift.local</hostname>
+    </host>
+    <host ip='192.168.122.5'>
+      <hostname>master3.openshift.local</hostname>
+    </host>
+    <host ip='192.168.122.6'>
+      <hostname>worker1.openshift.local</hostname>
+    </host>
+    <host ip='192.168.122.7'>
+      <hostname>worker2.openshift.local</hostname>
+    </host>
+    <host ip='192.168.122.8'>
+      <hostname>worker3.openshift.local</hostname>
+    </host>
+  </dns>
+  <ip address='192.168.122.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.122.2' end='192.168.122.254'/>
+      <host mac='52:54:00:4e:8c:84' name='bootstrap' ip='192.168.122.2'/>
+      <host mac='52:54:00:d9:ba:fe' name='master1' ip='192.168.122.3'/>
+      <host mac='52:54:00:05:e6:53' name='master2' ip='192.168.122.4'/>
+      <host mac='52:54:00:71:fc:54' name='master3' ip='192.168.122.5'/>
+      <host mac='52:54:00:01:e2:a5' name='worker1' ip='192.168.122.6'/>
+      <host mac='52:54:00:26:07:ff' name='worker2' ip='192.168.122.7'/>
+      <host mac='52:54:00:7b:76:6e' name='worker3' ip='192.168.122.8'/>
+      <host mac='52:54:00:7b:76:6f' name='lb' ip='192.168.122.9'/>
+    </dhcp>
+  </ip>
+</network>

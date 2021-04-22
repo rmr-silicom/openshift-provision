@@ -1,0 +1,4 @@
+*.raw
+bin
+downloads
+install_dir

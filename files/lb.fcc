@@ -1,0 +1,147 @@
+variant: fcos
+version: 1.3.0
+passwd:
+  users:
+    - name: core
+      password_hash: $6$Xh.hqd4yK1fvcZff$5XBdVan6rIQ27Sb.CdPdQi8xyHPbEKRe60O5hwRIVMnn3Q/E39l4lMTRtU6BBcQbf7rDjczn5I3M3lnAofvPU1
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII3YnQngSGTjcctyaFZsNwRv1hEJ2Q0iOMOMpmdcvsXM rmr@LIN-LAPTOP-02
+
+    - name: root
+      password_hash: $6$Xh.hqd4yK1fvcZff$5XBdVan6rIQ27Sb.CdPdQi8xyHPbEKRe60O5hwRIVMnn3Q/E39l4lMTRtU6BBcQbf7rDjczn5I3M3lnAofvPU1
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII3YnQngSGTjcctyaFZsNwRv1hEJ2Q0iOMOMpmdcvsXM rmr@LIN-LAPTOP-02
+
+systemd:
+  units:
+  - name: hello.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=A hello world unit!
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStart=/usr/bin/echo "Hello, World!"
+      [Install]
+      WantedBy=multi-user.target
+
+  - name: haproxy.service
+    enabled: true
+    contents: |
+      [Unit]
+      Description=Haproxy Load Balancer
+      After=network-online.target
+      Wants=network-online.target
+      [Service]
+      ExecStartPre=-/bin/podman kill haproxy
+      ExecStartPre=-/bin/podman rm haproxy
+      ExecStartPre=/bin/podman pull haproxy
+      ExecStart=/bin/podman run --name haproxy --privileged -p 80:80 -p 443:443 -p 6443:6443 -p 22623:22623 -p 9000:9000 -v /var/lib/haproxy:/var/lib/haproxy -v /etc/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro haproxy
+      [Install]
+      WantedBy=multi-user.target
+storage:
+  directories:
+  - path: /etc/haproxy
+  - path: /var/lib/haproxy
+  files:
+  - path: /etc/haproxy/haproxy.cfg
+    mode: 0444
+    contents:
+      inline: |
+        # Global settings
+        #---------------------------------------------------------------------
+        global
+            maxconn     20000
+            log         /dev/log local0 info
+            chroot      /var/lib/haproxy
+            pidfile     /var/run/haproxy.pid
+            user        haproxy
+            group       haproxy
+            daemon
+
+            # turn on stats unix socket
+            stats socket /var/lib/haproxy/stats
+
+        #---------------------------------------------------------------------
+        # common defaults that all the 'listen' and 'backend' sections will
+        # use if not designated in their block
+        #---------------------------------------------------------------------
+        defaults
+            mode                    http
+            log                     global
+            option                  httplog
+            option                  dontlognull
+            option http-server-close
+            option forwardfor       except 127.0.0.0/8
+            option                  redispatch
+            retries                 3
+            timeout http-request    10s
+            timeout queue           1m
+            timeout connect         10s
+            timeout client          300s
+            timeout server          300s
+            timeout http-keep-alive 10s
+            timeout check           10s
+            maxconn                 20000
+
+        listen stats
+            bind :9000
+            mode http
+            stats enable
+            stats uri /
+
+        frontend ocp4_k8s_api_fe
+            bind :6443
+            default_backend ocp4_k8s_api_be
+            mode tcp
+            option tcplog
+
+        backend ocp4_k8s_api_be
+            balance roundrobin
+            mode tcp
+            server      bootstrap bootstrap.openshift.local:6443 check
+            server      master1 master1.openshift.local:6443 check
+            server      master2 master2.openshift.local:6443 check
+            server      master3 master3.openshift.local:6443 check
+
+        frontend ocp4_machine_config_server_fe
+            bind :22623
+            default_backend ocp4_machine_config_server_be
+            mode tcp
+            option tcplog
+
+        backend ocp4_machine_config_server_be
+            balance roundrobin
+            mode tcp
+            server      bootstrap bootstrap.openshift.local:22623 check
+            server      master1 master1.openshift.local:22623 check
+            server      master2 master1.openshift.local:22623 check
+            server      master3 master1.openshift.local:22623 check
+
+        frontend ocp4_http_ingress_traffic_fe
+            bind :80
+            default_backend ocp4_http_ingress_traffic_be
+            mode tcp
+            option tcplog
+
+        backend ocp4_http_ingress_traffic_be
+            balance roundrobin
+            mode tcp
+            server      worker1 worker1.openshift.local:80 check
+            server      worker2 worker2.openshift.local:80 check
+            server      worker3 worker3.openshift.local:80 check
+
+        frontend ocp4_https_ingress_traffic_fe
+            bind :443
+            default_backend ocp4_https_ingress_traffic_be
+            mode tcp
+            option tcplog
+
+        backend ocp4_https_ingress_traffic_be
+            balance roundrobin
+            mode tcp
+            server      worker1 worker1.openshift.local:443 check
+            server      worker2 worker2.openshift.local:443 check
+            server      worker3 worker3.openshift.local:443 check
+

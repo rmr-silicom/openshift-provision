@@ -1,0 +1,23 @@
+{
+  "ignition": {
+    "version": "3.2.0"
+  },
+  "passwd": {
+    "users": [
+      {
+        "name": "core",
+        "passwordHash": "$6$Xh.hqd4yK1fvcZff$5XBdVan6rIQ27Sb.CdPdQi8xyHPbEKRe60O5hwRIVMnn3Q/E39l4lMTRtU6BBcQbf7rDjczn5I3M3lnAofvPU1",
+        "sshAuthorizedKeys": [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII3YnQngSGTjcctyaFZsNwRv1hEJ2Q0iOMOMpmdcvsXM rmr@LIN-LAPTOP-02"
+        ]
+      },
+      {
+        "name": "root",
+        "passwordHash": "$6$Xh.hqd4yK1fvcZff$5XBdVan6rIQ27Sb.CdPdQi8xyHPbEKRe60O5hwRIVMnn3Q/E39l4lMTRtU6BBcQbf7rDjczn5I3M3lnAofvPU1",
+        "sshAuthorizedKeys": [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII3YnQngSGTjcctyaFZsNwRv1hEJ2Q0iOMOMpmdcvsXM rmr@LIN-LAPTOP-02"
+        ]
+      }
+    ]
+  }
+}
