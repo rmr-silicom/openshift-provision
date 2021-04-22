@@ -1,3 +1,7 @@
+# Openshift install using kvm tools
+
+./create-cluster.sh
+
 # OpenShift Install
 
 The OpenShift installer `openshift-install` makes it easy to get a cluster
