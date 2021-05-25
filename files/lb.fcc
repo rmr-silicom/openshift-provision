@@ -37,7 +37,7 @@ systemd:
       ExecStartPre=-/bin/podman kill haproxy
       ExecStartPre=-/bin/podman rm haproxy
       ExecStartPre=/bin/podman pull haproxy
-      ExecStart=/bin/podman run --name haproxy --privileged -p 80:80 -p 443:443 -p 6443:6443 -p 22623:22623 -p 9000:9000 -v /var/lib/haproxy:/var/lib/haproxy -v /etc/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro haproxy
+      ExecStart=/bin/podman run --name haproxy -u 0:0 --privileged -p 80:80 -p 443:443 -p 6443:6443 -p 22623:22623 -p 9000:9000 -v /var/lib/haproxy:/var/lib/haproxy -v /etc/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro haproxy
       [Install]
       WantedBy=multi-user.target
 storage:
