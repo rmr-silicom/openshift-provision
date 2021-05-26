@@ -26,7 +26,7 @@ openshift_ver="4.6.0-0.okd-2021-02-14-205305"
 install_dir=$BASE/install_dir
 WORKERS="0"
 MASTERS="3"
-ssh_opts="-i $BASE/../files/node -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+ssh_opts="-i $BASE/files/node -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 INSTALLER=$BASE/bin/openshift-install
 OC=$BASE/bin/oc
 export KUBECONFIG=${install_dir}/auth/kubeconfig
