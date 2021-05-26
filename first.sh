@@ -216,9 +216,13 @@ create_vm() {
   if [ $hostname = "worker1" ] ; then
     if [ ! -z "$device" ] ; then
       lspci_args="--hostdev $device"
-    else
-      lspci_args="--hostdev $(lspci -d 10ec:525a | awk '{ print $1 }')"
     fi
+  fi
+
+  # Check for STS2 card, and enable passthrough for USB and Columbiaville
+  device="$(lsusb -d 0424:2660)"
+  if [ ! -z "$device" ] && [ $hostname = "worker2" ] ; then
+    lspci_args=" --hostdev $(lspci -d 8086:1591 | head -n1 | awk '{ print $1 }') --hostdev 0424:2660 "
   fi
 
   virt-install --connect="qemu:///system" --name="${1}" --vcpus="${VCPUS}" --memory="${2}" \
@@ -324,13 +328,14 @@ sleep 480
 $OC get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs --no-run-if-empty $OC adm certificate approve
 $OC get csr -o name | xargs oc adm certificate approve
 
-$INSTALLER --dir=${install_dir} wait-for install-complete --log-level debug
-
 while ! $(oc get nodes | grep -q worker1) ; do
   $OC get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs --no-run-if-empty $OC adm certificate approve
   $OC get csr -o name | xargs oc adm certificate approve
-  sleep 120
+  sleep 300
 done
+
+$INSTALLER --dir=${install_dir} wait-for install-complete --log-level debug
+
 
 # $OC apply -f ${BASE}/files/silicom-registry.yaml
 
@@ -338,4 +343,4 @@ cp -av $KUBECONFIG ~/.kube/
 
 sleep 60
 
-$OC apply -f ${BASE}/files/nfd-daemonset.yaml
+# $OC apply -f ${BASE}/files/nfd-daemonset.yaml
