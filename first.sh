@@ -222,7 +222,10 @@ create_vm() {
   # Check for STS2 card, and enable passthrough for USB and Columbiaville
   device="$(lsusb -d 0424:2660)"
   if [ ! -z "$device" ] && [ $hostname = "worker2" ] ; then
-    lspci_args=" --hostdev $(lspci -d 8086:1591 | head -n1 | awk '{ print $1 }') --hostdev 0424:2660 "
+    lspci_args=" --hostdev 0424:2660 "
+    for arg in $(lspci -d 8086:1591 | awk '{ print $1 }') ; do
+      lspci_args=" $lspci_args --hostdev $arg "
+    done
   fi
 
   virt-install --connect="qemu:///system" --name="${1}" --vcpus="${VCPUS}" --memory="${2}" \
