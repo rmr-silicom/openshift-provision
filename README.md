@@ -90,3 +90,8 @@ oc adm upgrade
 
 oc debug node/master1
 ```
+
+```
+oc create serviceaccount -n n5010 privilegeduser
+oc adm policy add-scc-to-user privileged -nn5010 -z privilegeduser
+```
