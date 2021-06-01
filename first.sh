@@ -219,17 +219,23 @@ create_vm() {
     fi
   fi
 
+  # https://github.com/andre-richter/vfio-pci-bind/blob/master/25-vfio-pci-bind.rules
   # Check for STS2 card, and enable passthrough for USB and Columbiaville
   device="$(lsusb -d 0424:2660)"
   if [ ! -z "$device" ] && [ $hostname = "worker2" ] ; then
     lspci_args=" --hostdev 0424:2660 "
+    lspci_args=" $lspci_args --hostdev 1546:01a9 "
+    lspci_args=" $lspci_args --hostdev 1374:0001 "
     for arg in $(lspci -d 8086:1591 | awk '{ print $1 }') ; do
-      lspci_args=" $lspci_args --hostdev $arg "
+      lspci_args=" $lspci_args --hostdev $arg,address.function=$(echo $arg | cut -d . -f 2),address.type='pci' "
     done
+#    addr="$(basename $(dirname $(realpath /sys/bus/pci/devices/$(lspci -D -d 8086:1591 | head -n1 | awk '{print $1}'))))"
+#    lspci_args=" $lspci_args --controller $addr,type=pci,address.type=pci,address.multifunction='on',model='pcie-root-port',index='10'"
   fi
 
   virt-install --connect="qemu:///system" --name="${1}" --vcpus="${VCPUS}" --memory="${2}" \
           --virt-type kvm \
+          --machine q35 \
           --accelerate \
           --hvm $lspci_args \
           --os-variant rhl9 \
@@ -281,7 +287,6 @@ while ! $(nc -v -z -w 1 lb.openshift.local 6443 > /dev/null 2>&1); do
   echo "Waiting for bootstrap"
   sleep 30
 done
-
 
 for i in $(seq 1 $WORKERS) ; do
     virsh start "worker$i"
