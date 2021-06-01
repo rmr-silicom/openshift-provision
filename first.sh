@@ -13,7 +13,7 @@ set -x
 
 BASE=$(dirname $(realpath "${BASH_SOURCE[0]}"))
 WEB_PORT=8080
-HOST_IP=$(ip a | grep -m 1 10.100 | awk '{print $2}' | sed 's/\/.*//')
+HOST_IP=$(ifconfig $(ip r | grep default | awk '{print $5}') | grep "inet " | awk '{print $2}')
 ignition_url=http://${HOST_IP}:${WEB_PORT}
 cluster_name="openshift"
 base_domain="local"
