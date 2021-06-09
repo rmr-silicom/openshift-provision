@@ -161,24 +161,24 @@ pullSecret: '$(cat ${BASE}/files/pull-secret.json)'
 sshKey: '$(cat ${BASE}/files/node.pub)'
 EOF
 
-  cp $BASE/files/lb.fcc $BASE/lb.fcc
   $INSTALLER create manifests --dir=${install_dir}
   if [ "$WORKERS" = "0" ] ; then
     sed -i 's/mastersSchedulable: false/mastersSchedulable: false/g' ${install_dir}/manifests/cluster-scheduler-02-config.yml
-    sed -i 's/worker1 worker1.openshift.local/master1 master1.openshift.local/g' $BASE/lb.fcc
-    sed -i 's/worker2 worker2.openshift.local/master2 master2.openshift.local/g' $BASE/lb.fcc
-    sed -i 's/worker3 worker3.openshift.local/master3 master3.openshift.local/g' $BASE/lb.fcc
+    sed -i 's/worker1 worker1.openshift.local/master1 master1.openshift.local/g' $BASE/files/lb.fcc
+    sed -i 's/worker2 worker2.openshift.local/master2 master2.openshift.local/g' $BASE/files/lb.fcc
+    sed -i 's/worker3 worker3.openshift.local/master3 master3.openshift.local/g' $BASE/files/lb.fcc
   else
     sed -i 's/mastersSchedulable: true/mastersSchedulable: false/g' ${install_dir}/manifests/cluster-scheduler-02-config.yml
   fi
 
   if [ "$WORKERS" = "2" ] ; then
-    sed -i '/worker3 worker3.openshift.local/d' $BASE/lb.fcc
+    sed -i '/worker3 worker3.openshift.local/d' $BASE/files/lb.fcc
   fi
 
   $INSTALLER create ignition-configs --dir=${install_dir}
 
-  podman run --pull=always -i --rm quay.io/coreos/fcct -p -s <$BASE/lb.fcc > ${install_dir}/lb.ign
+  podman run --pull=always -i --rm quay.io/coreos/fcct -p -s <$BASE/files/lb.fcc > ${install_dir}/lb.ign
+	podman run --rm -ti --volume $(PWD):/srv:z localhost/filetranspiler:latest -i /srv/files/baseconfig.yaml -f /srv/fakeroot --format=yaml --dereference-symlinks | sed 's/^/     /' >> $(PWD)/$(OUTPUT_YAML)
 
   # The current version of fcct produces ignition 3.2.0 where RHCOS ignition can only handle 3.1.0
   sed -i "s/\"version\": \"3.2.0\"/\"version\": \"3.1.0\"/g" ${install_dir}/lb.ign
@@ -227,7 +227,7 @@ create_vm() {
     lspci_args=" $lspci_args --hostdev 1546:01a9 "
     lspci_args=" $lspci_args --hostdev 1374:0001 "
     for arg in $(lspci -d 8086:1591 | awk '{ print $1 }') ; do
-      lspci_args=" $lspci_args --hostdev $arg,address.function=$(echo $arg | cut -d . -f 2),address.type='pci' "
+      lspci_args=" $lspci_args --hostdev $arg,address.function=$(echo $arg | cut -d . -f 2),address.type='pci'"
     done
 #    addr="$(basename $(dirname $(realpath /sys/bus/pci/devices/$(lspci -D -d 8086:1591 | head -n1 | awk '{print $1}'))))"
 #    lspci_args=" $lspci_args --controller $addr,type=pci,address.type=pci,address.multifunction='on',model='pcie-root-port',index='10'"
@@ -350,5 +350,7 @@ $INSTALLER --dir=${install_dir} wait-for install-complete --log-level debug
 cp -av $KUBECONFIG ~/.kube/
 
 sleep 60
+
+$OC get csr -o name | xargs oc adm certificate approve
 
 # $OC apply -f ${BASE}/files/nfd-daemonset.yaml

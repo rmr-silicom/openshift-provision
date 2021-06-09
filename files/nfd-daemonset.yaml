@@ -181,13 +181,13 @@ data:
   nfd-worker.conf: | ### <NFD-WORKER-CONF-START-DO-NOT-REMOVE>
     sources:
        custom:
-         - name: "silicom.fpga.n5010"
+         - name: "fpga.intel.com/network-accelerator-n5010"
            matchOn:
              - pciId :
                  vendor: ["1c2c"]
                  device: ["1000"]
 
-         - name: "silicom.fpga.n5011"
+         - name: "fpga.intel.com/network-accelerator-n5011"
            matchOn:
              - pciId :
                  vendor: ["1c2c"]
