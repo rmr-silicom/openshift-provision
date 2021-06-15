@@ -130,7 +130,6 @@ storage:
             mode tcp
             server      worker1 worker1.openshift.local:80 check
             server      worker2 worker2.openshift.local:80 check
-            server      worker3 worker3.openshift.local:80 check
 
         frontend ocp4_https_ingress_traffic_fe
             bind :443
@@ -143,5 +142,4 @@ storage:
             mode tcp
             server      worker1 worker1.openshift.local:443 check
             server      worker2 worker2.openshift.local:443 check
-            server      worker3 worker3.openshift.local:443 check
 

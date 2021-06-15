@@ -178,7 +178,7 @@ EOF
   $INSTALLER create ignition-configs --dir=${install_dir}
 
   podman run --pull=always -i --rm quay.io/coreos/fcct -p -s <$BASE/files/lb.fcc > ${install_dir}/lb.ign
-	podman run --rm -ti --volume $(PWD):/srv:z localhost/filetranspiler:latest -i /srv/files/baseconfig.yaml -f /srv/fakeroot --format=yaml --dereference-symlinks | sed 's/^/     /' >> $(PWD)/$(OUTPUT_YAML)
+	# podman run --rm -ti --volume $(pwd):/srv:z quay.io/ryan_raasch/filetranspiler:latest -i /srv/files/baseconfig.yaml -f /srv/fakeroot --format=yaml --dereference-symlinks | sed 's/^/     /' >> $(pwd)/$(OUTPUT_YAML)
 
   # The current version of fcct produces ignition 3.2.0 where RHCOS ignition can only handle 3.1.0
   sed -i "s/\"version\": \"3.2.0\"/\"version\": \"3.1.0\"/g" ${install_dir}/lb.ign
