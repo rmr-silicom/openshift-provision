@@ -13,7 +13,7 @@ set -x
 
 BASE=$(dirname $(realpath "${BASH_SOURCE[0]}"))
 WEB_PORT=8080
-HOST_IP=$(hostname -A | awk '{print $1}')
+HOST_IP=g9.silicom.dk
 ignition_url=http://${HOST_IP}:${WEB_PORT}
 cluster_name="openshift"
 base_domain="local"
