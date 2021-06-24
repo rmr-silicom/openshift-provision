@@ -175,6 +175,8 @@ EOF
     sed -i '/worker3 worker3.openshift.local/d' $BASE/files/lb.fcc
   fi
 
+	cp $BASE/files/machineconfig/*.yaml $install_dir/openshift/
+
   $INSTALLER create ignition-configs --dir=${install_dir}
 
   podman run --pull=always -i --rm quay.io/coreos/fcct -p -s <$BASE/files/lb.fcc > ${install_dir}/lb.ign
@@ -221,16 +223,13 @@ create_vm() {
 
   # https://github.com/andre-richter/vfio-pci-bind/blob/master/25-vfio-pci-bind.rules
   # Check for STS2 card, and enable passthrough for USB and Columbiaville
-  device="$(lsusb -d 0424:2660)"
-  if [ ! -z "$device" ] && [ $hostname = "worker2" ] ; then
+  if [ ! -z "$(lsusb -d 0424:2660)" ] && [ $hostname = "worker2" ] ; then
     lspci_args=" --hostdev 0424:2660 "
     lspci_args=" $lspci_args --hostdev 1546:01a9 "
     lspci_args=" $lspci_args --hostdev 1374:0001 "
     for arg in $(lspci -d 8086:1591 | awk '{ print $1 }') ; do
-      lspci_args=" $lspci_args --hostdev $arg,address.function=$(echo $arg | cut -d . -f 2),address.type='pci'"
+      lspci_args=" $lspci_args --hostdev $arg,address.domain=0,address.bus=0x2,address.slot=0x0,address.function=$(echo $arg | cut -d . -f 2),address.type='pci'"
     done
-#    addr="$(basename $(dirname $(realpath /sys/bus/pci/devices/$(lspci -D -d 8086:1591 | head -n1 | awk '{print $1}'))))"
-#    lspci_args=" $lspci_args --controller $addr,type=pci,address.type=pci,address.multifunction='on',model='pcie-root-port',index='10'"
   fi
 
   virt-install --connect="qemu:///system" --name="${1}" --vcpus="${VCPUS}" --memory="${2}" \
@@ -342,8 +341,9 @@ while ! $(oc get nodes | grep -q worker1) ; do
   sleep 300
 done
 
+sleep 300
+$OC get csr -o name | xargs oc adm certificate approve
 $INSTALLER --dir=${install_dir} wait-for install-complete --log-level debug
-
 
 # $OC apply -f ${BASE}/files/silicom-registry.yaml
 
