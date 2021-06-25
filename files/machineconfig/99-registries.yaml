@@ -8,14 +8,14 @@ metadata:
 spec:
   config:
     ignition:
-      version: 3.1.0
-     storage:
-       files:
-       - mode: 420
-         overwrite: true
-         path: /etc/containers/registries.conf
-         contents:
-           source: data:text/plain;charset=utf-8;base64,dW5xdWFsaWZpZWQtc2VhcmNoLXJlZ2lzdHJpZXMgPSBbJ3JlZ2lzdHJ5LmFjY2Vzcy5yZWRoYXQuY29tJywgJ2RvY2tlci5pbycsICdxdWF5LmlvJywgJ2RvY2tlci5zaWxpY29tLmRrOjUwMDAnXQoKW1tyZWdpc3RyeV1dCnByZWZpeD0icXVheS5pby9yeWFuX3JhYXNjaCIKbG9jYXRpb249ImRvY2tlci5zaWxpY29tLmRrOjUwMDAvcnlhbl9yYWFzY2giCgpbW3JlZ2lzdHJ5XV0KcHJlZml4PSJyeWFuX3JhYXNjaCIKbG9jYXRpb249ImRvY2tlci5zaWxpY29tLmRrOjUwMDAvcnlhbl9yYWFzY2giCgo=
+      version: 3.2.0
+    storage:
+      files:
+      - mode: 420
+        overwrite: true
+        path: /etc/containers/registries.conf
+        contents:
+          source: data:text/plain;charset=utf-8;base64,dW5xdWFsaWZpZWQtc2VhcmNoLXJlZ2lzdHJpZXMgPSBbJ3JlZ2lzdHJ5LmFjY2Vzcy5yZWRoYXQuY29tJywgJ2RvY2tlci5pbycsICdxdWF5LmlvJywgJ2RvY2tlci5zaWxpY29tLmRrOjUwMDAnXQoKW1tyZWdpc3RyeV1dCnByZWZpeD0icXVheS5pby9yeWFuX3JhYXNjaCIKbG9jYXRpb249ImRvY2tlci5zaWxpY29tLmRrOjUwMDAvcnlhbl9yYWFzY2giCgpbW3JlZ2lzdHJ5XV0KcHJlZml4PSJyeWFuX3JhYXNjaCIKbG9jYXRpb249ImRvY2tlci5zaWxpY29tLmRrOjUwMDAvcnlhbl9yYWFzY2giCgo=
 #cat << EOF | base64
 # unqualified-search-registries = ['registry.access.redhat.com', 'docker.io', 'quay.io', 'docker.silicom.dk:5000']
 #[[registry]]
