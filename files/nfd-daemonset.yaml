@@ -186,7 +186,11 @@ data:
              - pciId :
                  vendor: ["1c2c"]
                  device: ["1000"]
-
+         - name: "usb.ublox.gnss"
+           matchOn:
+             - usbId:
+               vendor: ["1546"]
+               device: ["01a9"]
          - name: "fpga.intel.com/network-accelerator-n5011"
            matchOn:
              - pciId :
