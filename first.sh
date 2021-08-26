@@ -356,5 +356,5 @@ $OC get csr -o name | xargs oc adm certificate approve
 $OC apply -f files/pv.yaml
 
 $OC patch config cluster -n openshift-image-registry --type merge --patch '{"spec": { "managementState": "Managed"}}'
-$OC patch config cluster -n openshift-image-registry --type merge --patch '{"spec": { "storage": { "pvc" : { "claim": ""}}}}'
+$OC patch config cluster -n openshift-image-registry --type merge --patch '{"spec": { "storage": { "pvc" : { "claim": "image-registry-storage-pvc"}}}}'
 # $OC apply -f ${BASE}/files/nfd-daemonset.yaml
