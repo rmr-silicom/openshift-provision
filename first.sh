@@ -353,8 +353,8 @@ sleep 60
 
 $OC get csr -o name | xargs oc adm certificate approve
 # https://docs.openshift.com/container-platform/4.8/registry/configuring-registry-operator.html
+$OC apply -f files/pv.yaml
+
 $OC patch config cluster -n openshift-image-registry --type merge --patch '{"spec": { "managementState": "Managed"}}'
-
 $OC patch config cluster -n openshift-image-registry --type merge --patch '{"spec": { "storage": { "pvc" : { "claim": ""}}}}'
-
 # $OC apply -f ${BASE}/files/nfd-daemonset.yaml
