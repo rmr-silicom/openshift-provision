@@ -186,7 +186,11 @@ data:
              - pciId :
                  vendor: ["1c2c"]
                  device: ["1000"]
-
+         - name: "usb.ublox.gnss"
+           matchOn:
+             - usbId:
+               vendor: ["1546"]
+               device: ["01a9"]
          - name: "fpga.intel.com/network-accelerator-n5011"
            matchOn:
              - pciId :
@@ -198,6 +202,20 @@ data:
              - pciId :
                  vendor: ["1c2c"]
                  device: ["1002"]
+
+        - name: "silicom.fpga.columbiaville"
+          matchOn:
+            - pciId :
+                vendor: ["8086"]
+                device: ["1591"]
+
+        - name: "silicom.fpga.sts2"
+          matchOn:
+            - pciId :
+                vendor: ["8086"]
+                device: ["1591"]
+                subsystem_vendor: ["1374"]
+                subsystem_device: ["02d8"]
 ### <NFD-WORKER-CONF-END-DO-NOT-REMOVE>
 ---
 ## Example for more custom configs in an additional configmap (3/3)
