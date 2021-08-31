@@ -21,8 +21,9 @@ VCPUS="4"
 RAM_MB="8196"
 DISK_GB="20"
 # openshift_ver="4.7.0-0.okd-2021-03-07-090821"
-openshift_ver="4.6.0-0.okd-2021-02-14-205305"
+# openshift_ver="4.6.0-0.okd-2021-02-14-205305"
 # openshift_ver="4.6.0-0.okd-2021-01-23-132511"
+# openshift_ver="4.7.0-0.okd-2021-08-07-063045"
 install_dir=$BASE/install_dir
 WORKERS="0"
 MASTERS="3"
@@ -68,7 +69,7 @@ done
 
 if ! $(swapon | grep -q swapfile) ; then
   echo "Enable swap";
-  exit 0
+#  exit 0
 fi
 
 setup_fcos() {
@@ -85,7 +86,10 @@ setup_fcos() {
 }
 
 setup_rhcos() {
-  rhcos_ver=4.6
+  rhcos_ver=4.7
+  ocp_version=4.7.25
+  #ocp_version=4.6.23
+  #ocp_version=4.8.6
   rhcos_release_ver=latest
   image_base=https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${rhcos_ver}/${rhcos_release_ver}
   image_url=${image_base}/rhcos-metal.x86_64.raw.gz
@@ -93,8 +97,8 @@ setup_rhcos() {
   rootfs_url=${image_base}/rhcos-live-rootfs.x86_64.img
   initramfs_url=${image_base}/rhcos-live-initramfs.x86_64.img
   downloads=$BASE/downloads/openshift-v4/dependencies/rhcos/${rhcos_ver}/${rhcos_release_ver}
-  ocp_client_url=https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/4.6.23/openshift-client-linux.tar.gz
-  ocp_install_url=https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/4.6.23/openshift-install-linux.tar.gz
+  ocp_client_url=https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${ocp_version}/openshift-client-linux.tar.gz
+  ocp_install_url=https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${ocp_version}/openshift-install-linux.tar.gz
 }
 
 start_fileserver() {
@@ -175,7 +179,8 @@ EOF
     sed -i '/worker3 worker3.openshift.local/d' $BASE/files/lb.fcc
   fi
 
-	cp $BASE/files/machineconfig/*.yaml $install_dir/openshift/
+  # Can't get to work, for now...
+	# cp $BASE/files/machineconfig/*.yaml $install_dir/openshift/
 
   $INSTALLER create ignition-configs --dir=${install_dir}
 
@@ -345,7 +350,9 @@ sleep 300
 $OC get csr -o name | xargs oc adm certificate approve
 $INSTALLER --dir=${install_dir} wait-for install-complete --log-level debug
 
-# $OC apply -f ${BASE}/files/silicom-registry.yaml
+cd ${BASE}/files/machineconfig && ./99-registries.sh > ./99-registries.yaml && cd -
+
+$OC apply -f ${BASE}/files/machineconfig/*
 
 cp -av $KUBECONFIG ~/.kube/
 
