@@ -86,10 +86,10 @@ setup_fcos() {
 }
 
 setup_rhcos() {
-  rhcos_ver=4.7
-  ocp_version=4.7.25
+  rhcos_ver=4.8
+  #ocp_version=4.7.25
   #ocp_version=4.6.23
-  #ocp_version=4.8.6
+  ocp_version=4.8.10
   rhcos_release_ver=latest
   image_base=https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${rhcos_ver}/${rhcos_release_ver}
   image_url=${image_base}/rhcos-metal.x86_64.raw.gz
@@ -350,9 +350,11 @@ sleep 300
 $OC get csr -o name | xargs oc adm certificate approve
 $INSTALLER --dir=${install_dir} wait-for install-complete --log-level debug
 
+# https://puiterwijk.org/posts/rhel-containers-on-non-rhel-hosts/
 cd ${BASE}/files/machineconfig && ./99-registries.sh > ./99-registries.yaml && cd -
 
-$OC apply -f ${BASE}/files/machineconfig/*
+# https://cloud.redhat.com/blog/how-to-use-entitled-image-builds-to-build-drivercontainers-with-ubi-on-openshift
+$OC apply -f ${BASE}/files/machineconfig/0000-disable-secret-automount.yaml
 
 cp -av $KUBECONFIG ~/.kube/
 
@@ -360,9 +362,12 @@ sleep 60
 
 $OC get csr -o name | xargs oc adm certificate approve
 # https://docs.openshift.com/container-platform/4.8/registry/configuring-registry-operator.html
-$OC apply -f files/pv.yaml
+# $OC apply -f files/pv.yaml
 
 $OC patch config.imageregistry.operator.openshift.io/cluster --type=merge -p '{"spec":{"rolloutStrategy":"Recreate","replicas":1}}'
 $OC patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}'
 $OC patch config cluster -n openshift-image-registry --type merge --patch '{"spec": { "managementState": "Managed"}}'
-$OC apply -f ${BASE}/files/nfd-daemonset.yaml
+
+$OC apply -f ${BASE}/files/nfd-operator.yaml
+sleep 120
+$OC apply -f ${BASE}/files/nfd-cr.yaml
