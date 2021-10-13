@@ -19,7 +19,8 @@ cluster_name="openshift"
 base_domain="local"
 VCPUS="4"
 RAM_MB="8196"
-DISK_GB="20"
+DISK_GB="15"
+DISK_GB_WORKER="30"
 # openshift_ver="4.7.0-0.okd-2021-03-07-090821"
 # openshift_ver="4.6.0-0.okd-2021-02-14-205305"
 # openshift_ver="4.6.0-0.okd-2021-01-23-132511"
@@ -215,7 +216,12 @@ create_vm() {
   local hostname=$1
   local disk=${BASE}/${hostname}.$disk_type
 
-  qemu-img create -f $disk_type ${disk} ${DISK_GB}G
+  if [ $hostname = "worker1" ] || [ $hostname = "worker2" ] ; then
+    qemu-img create -f $disk_type ${disk} ${DISK_GB_WORKER}G
+  else
+    qemu-img create -f $disk_type ${disk} ${DISK_GB}G
+  fi
+
   chmod a+wr ${disk}
 
   device="$(lspci -d 1c2c:1000 | awk '{ print $1 }')"
@@ -368,6 +374,9 @@ $OC patch config.imageregistry.operator.openshift.io/cluster --type=merge -p '{"
 $OC patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}'
 $OC patch config cluster -n openshift-image-registry --type merge --patch '{"spec": { "managementState": "Managed"}}'
 
+$OC apply -f ${BASE}/files/cleanup.yaml
+sleep 300
 $OC apply -f ${BASE}/files/nfd-operator.yaml
 sleep 120
 $OC apply -f ${BASE}/files/nfd-cr.yaml
+$OC delete pod --field-selector=status.phase==Succeeded --all-namespaces
