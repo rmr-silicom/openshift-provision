@@ -89,10 +89,11 @@ setup_fcos() {
 setup_rhcos() {
   rhcos_ver=4.8
   #rhcos_ver=4.9
-  #ocp_version=4.7.25
-  #ocp_version=4.6.23
-  ocp_version=4.8.14
-  #ocp_version=4.9.0
+  #ocp_client_ver=4.7.25
+  #ocp_client_ver=4.6.23
+  ocp_client_ver=4.8.20
+  #ocp_client_ver=fast-4.8
+  #ocp_client_ver=4.9.0
   rhcos_release_ver=latest
   image_base=https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${rhcos_ver}/${rhcos_release_ver}
   image_url=${image_base}/rhcos-metal.x86_64.raw.gz
@@ -100,8 +101,9 @@ setup_rhcos() {
   rootfs_url=${image_base}/rhcos-live-rootfs.x86_64.img
   initramfs_url=${image_base}/rhcos-live-initramfs.x86_64.img
   downloads=$BASE/downloads/openshift-v4/dependencies/rhcos/${rhcos_ver}/${rhcos_release_ver}
-  ocp_client_url=https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${ocp_version}/openshift-client-linux.tar.gz
-  ocp_install_url=https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${ocp_version}/openshift-install-linux.tar.gz
+  downloads_utils=$BASE/downloads/${ocp_client_ver}
+  ocp_client_url=https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${ocp_client_ver}/openshift-client-linux.tar.gz
+  ocp_install_url=https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${ocp_client_ver}/openshift-install-linux.tar.gz
 }
 
 start_fileserver() {
@@ -121,17 +123,21 @@ cleanup() {
     mkdir -p $downloads
   fi
 
+  if [ ! -e $downloads_utils ] ; then
+    mkdir -p $downloads_utils
+  fi
+
   [ ! -e $downloads/image.img ] && wget ${image_url} -O $downloads/image.img
   [ ! -e $downloads/rootfs.img ] && wget ${rootfs_url} -O $downloads/rootfs.img
   [ ! -e $downloads/kernel.img ] && wget ${kernel_url} -O $downloads/kernel.img
   [ ! -e $downloads/initramfs.img ] && wget ${initramfs_url} -O $downloads/initramfs.img
-  [ ! -e $downloads/install.tar.gz ] && wget $ocp_install_url -O $downloads/install.tar.gz
-  [ ! -e $downloads/client.tar.gz ] && wget $ocp_client_url -O $downloads/client.tar.gz
+  [ ! -e $downloads_utils/install.tar.gz ] && wget $ocp_install_url -O $downloads_utils/install.tar.gz
+  [ ! -e $downloads_utils/client.tar.gz ] && wget $ocp_client_url -O $downloads_utils/client.tar.gz
   [ ! -e $BASE/bin ] && mkdir -p $BASE/bin
 
   rm $BASE/bin/*
-  tar xvf $downloads/install.tar.gz -C $BASE/bin/
-  tar xvf $downloads/client.tar.gz -C $BASE/bin/
+  tar xvf $downloads_utils/install.tar.gz -C $BASE/bin/
+  tar xvf $downloads_utils/client.tar.gz -C $BASE/bin/
   chmod +x  $BASE/bin/*
 
   if [ -e .openshift_install.log ] ; then
@@ -378,9 +384,9 @@ $OC patch config cluster -n openshift-image-registry --type merge --patch '{"spe
 
 $OC apply -f ${BASE}/files/cleanup.yaml
 sleep 300
-$OC apply -f ${BASE}/files/nfd-operator.yaml
-sleep 120
-$OC apply -f ${BASE}/files/nfd-cr.yaml
+# $OC apply -f ${BASE}/files/nfd-operator.yaml
+#sleep 120
+#$OC apply -f ${BASE}/files/nfd-cr.yaml
 $OC delete pod --field-selector=status.phase==Succeeded --all-namespaces
 
 $OC patch clusterversion/version -p '{"spec":{"channel":"candidate-4.8"}}' --type=merge
