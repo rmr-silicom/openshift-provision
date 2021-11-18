@@ -88,9 +88,11 @@ setup_fcos() {
 
 setup_rhcos() {
   rhcos_ver=4.8
+  #rhcos_ver=4.9
   #ocp_version=4.7.25
   #ocp_version=4.6.23
-  ocp_version=4.8.10
+  ocp_version=4.8.14
+  #ocp_version=4.9.0
   rhcos_release_ver=latest
   image_base=https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${rhcos_ver}/${rhcos_release_ver}
   image_url=${image_base}/rhcos-metal.x86_64.raw.gz
@@ -380,3 +382,5 @@ $OC apply -f ${BASE}/files/nfd-operator.yaml
 sleep 120
 $OC apply -f ${BASE}/files/nfd-cr.yaml
 $OC delete pod --field-selector=status.phase==Succeeded --all-namespaces
+
+$OC patch clusterversion/version -p '{"spec":{"channel":"candidate-4.8"}}' --type=merge
