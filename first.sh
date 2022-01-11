@@ -19,7 +19,7 @@ cluster_name="openshift"
 base_domain="local"
 VCPUS="4"
 RAM_MB="8196"
-DISK_GB="15"
+DISK_GB="20"
 DISK_GB_WORKER="30"
 # openshift_ver="4.7.0-0.okd-2021-03-07-090821"
 # openshift_ver="4.6.0-0.okd-2021-02-14-205305"
@@ -352,16 +352,16 @@ done
 sleep 480
 
 $OC get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs --no-run-if-empty $OC adm certificate approve
-$OC get csr -o name | xargs oc adm certificate approve
+$OC get csr -o name | xargs $OC adm certificate approve
 
-while ! $(oc get nodes | grep -q worker1) ; do
+while ! $($OC get nodes | grep -q worker1) ; do
   $OC get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs --no-run-if-empty $OC adm certificate approve
-  $OC get csr -o name | xargs oc adm certificate approve
+  $OC get csr -o name | xargs $OC adm certificate approve
   sleep 300
 done
 
 sleep 300
-$OC get csr -o name | xargs oc adm certificate approve
+$OC get csr -o name | xargs $OC adm certificate approve
 $INSTALLER --dir=${install_dir} wait-for install-complete --log-level debug
 
 # https://puiterwijk.org/posts/rhel-containers-on-non-rhel-hosts/
@@ -390,3 +390,10 @@ sleep 300
 $OC delete pod --field-selector=status.phase==Succeeded --all-namespaces
 
 $OC patch clusterversion/version -p '{"spec":{"channel":"candidate-4.8"}}' --type=merge
+
+if ! $($OC describe configs.imageregistry.operator.openshift.io cluster | grep "Management State:" | grep -q Managed) ; then
+    echo "Registry not enabled."
+    $OC patch config.imageregistry.operator.openshift.io/cluster --type=merge -p '{"spec":{"rolloutStrategy":"Recreate","replicas":1}}'
+    $OC patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}'
+    $OC patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"managementState":"Managed"}}'
+fi
