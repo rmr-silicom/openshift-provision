@@ -262,6 +262,11 @@ create_vm() {
           --extra-args "rd.neednet=1 coreos.inst.install_dev=/dev/sda coreos.inst=yes console=ttyS0 coreos.live.rootfs_url=http://${HOST_IP}:8080/rootfs.img coreos.inst.insecure coreos.inst.ignition_url=${ignition_url}/${3} coreos.inst.image_url=http://${HOST_IP}:8080/image.img"
 }
 
+if ! $(head /etc/resolv.conf -n 1 | grep -q "nameserver 192.168.122.1"); then
+  echo "Please add nameserver 192.168.122.1 as first line in /etc/resolv.conf"
+  exit 0
+fi
+
 setup_rhcos
 cleanup
 
@@ -334,7 +339,7 @@ while ! $(ssh ${ssh_opts} core@bootstrap.${cluster_name}.${base_domain} "[ -e /o
 done
 date
 
-openshift-install gather bootstrap --dir=${install_dir}
+openshift-install gather bootstrap --dir=${install_dir} --bootstrap=bootstrap.openshift.local --master=master1.openshift.local --log-level=debug
 
 virsh destroy bootstrap
 virsh undefine bootstrap --remove-all-storage
