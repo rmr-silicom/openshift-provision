@@ -29,8 +29,7 @@ install_dir=$BASE/install_dir
 WORKERS="0"
 MASTERS="3"
 ssh_opts="-i $BASE/files/node -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-INSTALLER=$BASE/bin/openshift-install
-OC=$BASE/bin/oc
+export PATH=${PATH}:$BASE/bin
 export KUBECONFIG=${install_dir}/auth/kubeconfig
 disk_type="raw"
 DESTROY="no"
@@ -107,10 +106,7 @@ setup_rhcos() {
 }
 
 start_fileserver() {
-  if $(docker ps | grep "static-file-server" > /dev/null 2>&1) ; then
-      docker rm -f static-file-server
-  fi
-
+  docker rm -f $(docker ps -a -q) > /dev/null 2>&1
   cp $downloads/*.img ${install_dir}
   docker run -d --name static-file-server --rm  -v ${install_dir}:/web -p ${WEB_PORT}:${WEB_PORT} -u $(id -u):$(id -g) halverneus/static-file-server:latest
   sleep 1
@@ -174,7 +170,7 @@ pullSecret: '$(cat ${BASE}/files/pull-secret.json)'
 sshKey: '$(cat ${BASE}/files/node.pub)'
 EOF
 
-  $INSTALLER create manifests --dir=${install_dir}
+  openshift-install create manifests --dir=${install_dir}
   if [ "$WORKERS" = "0" ] ; then
     sed -i 's/mastersSchedulable: false/mastersSchedulable: false/g' ${install_dir}/manifests/cluster-scheduler-02-config.yml
     sed -i 's/worker1 worker1.openshift.local/master1 master1.openshift.local/g' $BASE/files/lb.fcc
@@ -191,7 +187,7 @@ EOF
   # Can't get to work, for now...
 	# cp $BASE/files/machineconfig/*.yaml $install_dir/openshift/
 
-  $INSTALLER create ignition-configs --dir=${install_dir}
+  openshift-install create ignition-configs --dir=${install_dir}
 
   podman run --pull=always -i --rm quay.io/coreos/fcct -p -s <$BASE/files/lb.fcc > ${install_dir}/lb.ign
 	# podman run --rm -ti --volume $(pwd):/srv:z quay.io/ryan_raasch/filetranspiler:latest -i /srv/files/baseconfig.yaml -f /srv/fakeroot --format=yaml --dereference-symlinks | sed 's/^/     /' >> $(pwd)/$(OUTPUT_YAML)
@@ -269,6 +265,8 @@ create_vm() {
 setup_rhcos
 cleanup
 
+oc get csr -o name
+
 if [ $DESTROY = "yes" ] ; then
   exit 0
 fi
@@ -322,7 +320,7 @@ while ! $(ssh ${ssh_opts} core@bootstrap.${cluster_name}.${base_domain} "[ -e /o
 done
 date
 
-$INSTALLER --dir=${install_dir} wait-for bootstrap-complete --log-level debug
+openshift-install --dir=${install_dir} wait-for bootstrap-complete --log-level debug
 
 while ! $(ssh ${ssh_opts} core@bootstrap.${cluster_name}.${base_domain} "[ -e /opt/openshift/cb-bootstrap.done ]") ; do
   echo -n "Waiting for cb-bootstrap.done"
@@ -336,7 +334,7 @@ while ! $(ssh ${ssh_opts} core@bootstrap.${cluster_name}.${base_domain} "[ -e /o
 done
 date
 
-$INSTALLER gather bootstrap --dir=${install_dir}
+openshift-install gather bootstrap --dir=${install_dir}
 
 virsh destroy bootstrap
 virsh undefine bootstrap --remove-all-storage
@@ -351,49 +349,49 @@ done
 
 sleep 480
 
-$OC get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs --no-run-if-empty $OC adm certificate approve
-$OC get csr -o name | xargs $OC adm certificate approve
+oc get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs --no-run-if-empty oc adm certificate approve
+oc get csr -o name | xargs oc adm certificate approve
 
-while ! $($OC get nodes | grep -q worker1) ; do
-  $OC get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs --no-run-if-empty $OC adm certificate approve
-  $OC get csr -o name | xargs $OC adm certificate approve
+while ! $(oc get nodes | grep -q worker1) ; do
+  oc get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs --no-run-if-empty oc adm certificate approve
+  oc get csr -o name | xargs oc adm certificate approve
   sleep 300
 done
 
 sleep 300
-$OC get csr -o name | xargs $OC adm certificate approve
-$INSTALLER --dir=${install_dir} wait-for install-complete --log-level debug
+oc get csr -o name | xargs oc adm certificate approve
+openshift-install --dir=${install_dir} wait-for install-complete --log-level debug
 
 # https://puiterwijk.org/posts/rhel-containers-on-non-rhel-hosts/
 cd ${BASE}/files/machineconfig && ./99-registries.sh > ./99-registries.yaml && cd -
 
 # https://cloud.redhat.com/blog/how-to-use-entitled-image-builds-to-build-drivercontainers-with-ubi-on-openshift
-$OC apply -f ${BASE}/files/machineconfig/0000-disable-secret-automount.yaml
+oc apply -f ${BASE}/files/machineconfig/0000-disable-secret-automount.yaml
 
 cp -av $KUBECONFIG ~/.kube/
 
 sleep 60
 
-$OC get csr -o name | xargs oc adm certificate approve
+oc get csr -o name | xargs oc adm certificate approve
 # https://docs.openshift.com/container-platform/4.8/registry/configuring-registry-operator.html
-# $OC apply -f files/pv.yaml
+# oc apply -f files/pv.yaml
 
-$OC patch config.imageregistry.operator.openshift.io/cluster --type=merge -p '{"spec":{"rolloutStrategy":"Recreate","replicas":1}}'
-$OC patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}'
-$OC patch config cluster -n openshift-image-registry --type merge --patch '{"spec": { "managementState": "Managed"}}'
+oc patch config.imageregistry.operator.openshift.io/cluster --type=merge -p '{"spec":{"rolloutStrategy":"Recreate","replicas":1}}'
+oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}'
+oc patch config cluster -n openshift-image-registry --type merge --patch '{"spec": { "managementState": "Managed"}}'
 
-$OC apply -f ${BASE}/files/cleanup.yaml
+oc apply -f ${BASE}/files/cleanup.yaml
 sleep 300
-# $OC apply -f ${BASE}/files/nfd-operator.yaml
+# oc apply -f ${BASE}/files/nfd-operator.yaml
 #sleep 120
-#$OC apply -f ${BASE}/files/nfd-cr.yaml
-$OC delete pod --field-selector=status.phase==Succeeded --all-namespaces
+#oc apply -f ${BASE}/files/nfd-cr.yaml
+oc delete pod --field-selector=status.phase==Succeeded --all-namespaces
 
-$OC patch clusterversion/version -p '{"spec":{"channel":"candidate-4.8"}}' --type=merge
+oc patch clusterversion/version -p '{"spec":{"channel":"candidate-4.8"}}' --type=merge
 
-if ! $($OC describe configs.imageregistry.operator.openshift.io cluster | grep "Management State:" | grep -q Managed) ; then
+if ! $(oc describe configs.imageregistry.operator.openshift.io cluster | grep "Management State:" | grep -q Managed) ; then
     echo "Registry not enabled."
-    $OC patch config.imageregistry.operator.openshift.io/cluster --type=merge -p '{"spec":{"rolloutStrategy":"Recreate","replicas":1}}'
-    $OC patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}'
-    $OC patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"managementState":"Managed"}}'
+    oc patch config.imageregistry.operator.openshift.io/cluster --type=merge -p '{"spec":{"rolloutStrategy":"Recreate","replicas":1}}'
+    oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}'
+    oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"managementState":"Managed"}}'
 fi
