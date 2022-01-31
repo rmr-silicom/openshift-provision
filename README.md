@@ -5,12 +5,12 @@
 
 https://github.com/openshift/installer/blob/master/docs/user/metal/install_ipi.md
 
-## Openshift get the ClusterOperator types/status (co)
+### Openshift get the ClusterOperator types/status (co)
 oc get co
 oc get ClusterOperators
 oc get clusteroperators -w
 
-## Describe the console cluster operator.
+### Describe the console cluster operator.
 oc describe co console
 
 # Get the pods in the ClusterOperator console operator

@@ -90,7 +90,7 @@ setup_rhcos() {
   #rhcos_ver=4.9
   #ocp_client_ver=4.7.25
   #ocp_client_ver=4.6.23
-  ocp_client_ver=4.8.20
+  ocp_client_ver=4.8.27
   #ocp_client_ver=fast-4.8
   #ocp_client_ver=4.9.0
   rhcos_release_ver=latest
@@ -189,7 +189,7 @@ EOF
 
   openshift-install create ignition-configs --dir=${install_dir}
 
-  podman run --pull=always -i --rm quay.io/coreos/fcct -p -s <$BASE/files/lb.fcc > ${install_dir}/lb.ign
+  podman run -i --rm quay.io/coreos/fcct -p -s <$BASE/files/lb.fcc > ${install_dir}/lb.ign
 	# podman run --rm -ti --volume $(pwd):/srv:z quay.io/ryan_raasch/filetranspiler:latest -i /srv/files/baseconfig.yaml -f /srv/fakeroot --format=yaml --dereference-symlinks | sed 's/^/     /' >> $(pwd)/$(OUTPUT_YAML)
 
   # The current version of fcct produces ignition 3.2.0 where RHCOS ignition can only handle 3.1.0
@@ -236,15 +236,27 @@ create_vm() {
     fi
   fi
 
+  if !$(grep -r -q 'options vfio-pci ids=1c2c:1000,0424:2660,8086:1591,1546:01a9,1374:0001,0424:2514' /etc/modprobe.d); then
+    echo "Modprobe needs to be updated, reboot after creating /etc/modprobe.d/vfio.conf with the following information"
+    echo "echo 'options vfio-pci ids=1c2c:1000,0424:2660,8086:1591,1546:01a9,1374:0001,0424:2514' > /etc/modprobe.d/vfio.conf"
+    exit 0
+  fi
   # https://github.com/andre-richter/vfio-pci-bind/blob/master/25-vfio-pci-bind.rules
   # Check for STS2 card, and enable passthrough for USB and Columbiaville
   if [ ! -z "$(lsusb -d 0424:2660)" ] && [ $hostname = "worker2" ] ; then
-    lspci_args=" --hostdev 0424:2660 "
-    lspci_args=" $lspci_args --hostdev 1546:01a9 "
-    lspci_args=" $lspci_args --hostdev 1374:0001 "
-    for arg in $(lspci -d 8086:1591 | awk '{ print $1 }') ; do
-      lspci_args=" $lspci_args --hostdev $arg,address.domain=0,address.bus=0x2,address.slot=0x0,address.function=$(echo $arg | cut -d . -f 2),address.type='pci'"
-    done
+      lspci_args=" --hostdev 0424:2660 "
+      lspci_args=" $lspci_args --hostdev 1546:01a9 "
+      lspci_args=" $lspci_args --hostdev 1374:0001 "
+      for arg in $(lspci -d 8086:1591 | awk '{ print $1 }') ; do
+        lspci_args=" $lspci_args --hostdev $arg,address.domain=0,address.bus=0x2,address.slot=0x0,address.function=$(echo $arg | cut -d . -f 2),address.type='pci'"
+      done
+  elif [ ! -z "$(lsusb -d 0424:2514)" ] && [ $hostname = "worker2" ] ; then
+      lspci_args=" --hostdev 0424:2514 "
+      lspci_args=" $lspci_args --hostdev 1546:01a9 "
+      lspci_args=" $lspci_args --hostdev 1374:0001 "
+      for arg in $(lspci -d 8086:1591 | awk '{ print $1 }') ; do
+        lspci_args=" $lspci_args --hostdev $arg,address.domain=0,address.bus=0x2,address.slot=0x0,address.function=$(echo $arg | cut -d . -f 2),address.type='pci'"
+      done
   fi
 
   virt-install --connect="qemu:///system" --name="${1}" --vcpus="${VCPUS}" --memory="${2}" \
