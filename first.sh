@@ -236,6 +236,12 @@ create_vm() {
     fi
   fi
 
+  if !$(grep -q 'intel_iommu=on pci-stub.ids=8086:0b2b vfio-pci.ids=1c2c:1000,8086:6f0a' /proc/cmdline); then
+    echo "Update /proc/cmdline to have, using /boot/grub/grub.cfg"
+    echo "intel_iommu=on pci-stub.ids=8086:0b2b vfio-pci.ids=1c2c:1000,8086:6f0a"
+    exit 0
+  fi
+
   if !$(grep -r -q 'options vfio-pci ids=1c2c:1000,0424:2660,8086:1591,1546:01a9,1374:0001,0424:2514' /etc/modprobe.d); then
     echo "Modprobe needs to be updated, reboot after creating /etc/modprobe.d/vfio.conf with the following information"
     echo "echo 'options vfio-pci ids=1c2c:1000,0424:2660,8086:1591,1546:01a9,1374:0001,0424:2514' > /etc/modprobe.d/vfio.conf"
