@@ -21,10 +21,6 @@ VCPUS="4"
 RAM_MB="8196"
 DISK_GB="20"
 DISK_GB_WORKER="30"
-# openshift_ver="4.7.0-0.okd-2021-03-07-090821"
-# openshift_ver="4.6.0-0.okd-2021-02-14-205305"
-# openshift_ver="4.6.0-0.okd-2021-01-23-132511"
-# openshift_ver="4.7.0-0.okd-2021-08-07-063045"
 install_dir=$BASE/install_dir
 WORKERS="0"
 MASTERS="3"
@@ -73,16 +69,21 @@ if ! $(swapon | grep -q swapfile) ; then
 fi
 
 setup_fcos() {
-  fcos_ver="33.20210217.3.0"
+  fcos_ver="35.20220131.3.0"
   fedora_base="fedora-coreos"
+  # okd_version="4.7.0-0.okd-2021-03-07-090821"
+  # okd_version="4.6.0-0.okd-2021-02-14-205305"
+  # okd_version="4.6.0-0.okd-2021-01-23-132511"
+  # okd_version="4.7.0-0.okd-2021-08-07-063045"
+  okd_version="4.9.0-0.okd-2022-02-12-140851"
   image_base="https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/${fcos_ver}/x86_64"
   image_url=${image_base}/fedora-coreos-${fcos_ver}-metal.x86_64.raw.xz
   rootfs_url=${image_base}/fedora-coreos-${fcos_ver}-live-rootfs.x86_64.img
   initramfs_url=${image_base}/fedora-coreos-${fcos_ver}-live-initramfs.x86_64.img
   kernel_url=${image_base}/fedora-coreos-${fcos_ver}-live-kernel-x86_64
   downloads=$BASE/downloads/openshift-v4/dependencies/fcos/${fcos_ver}
-  ocp_install_url=https://github.com/openshift/okd/releases/download/${openshift_ver}/openshift-install-linux-${openshift_ver}.tar.gz
-  ocp_client_url=https://github.com/openshift/okd/releases/download/${openshift_ver}/openshift-client-linux-${openshift_ver}.tar.gz
+  ocp_install_url=https://github.com/openshift/okd/releases/download/${okd_version}/openshift-install-linux-${okd_version}.tar.gz
+  ocp_client_url=https://github.com/openshift/okd/releases/download/${okd_version}/openshift-client-linux-${okd_version}.tar.gz
 }
 
 setup_rhcos() {
@@ -375,11 +376,13 @@ sleep 480
 oc get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs --no-run-if-empty oc adm certificate approve
 oc get csr -o name | xargs oc adm certificate approve
 
-while ! $(oc get nodes | grep -q worker1) ; do
-  oc get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs --no-run-if-empty oc adm certificate approve
-  oc get csr -o name | xargs oc adm certificate approve
-  sleep 300
-done
+if [ $WORKERS != "0" ] ; then
+  while ! $(oc get nodes | grep -q worker1) ; do
+    oc get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs --no-run-if-empty oc adm certificate approve
+    oc get csr -o name | xargs oc adm certificate approve
+    sleep 300
+  done
+fi
 
 sleep 300
 oc get csr -o name | xargs oc adm certificate approve
