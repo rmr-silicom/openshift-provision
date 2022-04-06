@@ -87,15 +87,10 @@ setup_fcos() {
 }
 
 setup_rhcos() {
-  rhcos_ver=4.8
-  #rhcos_ver=4.9
-  #ocp_client_ver=4.7.25
-  #ocp_client_ver=4.6.23
+  rhcos_ver=4.10
   ocp_client_ver=4.10.3
-  #ocp_client_ver=fast-4.8
-  #ocp_client_ver=4.9.0
-
   rhcos_release_ver=latest
+
   image_base=https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${rhcos_ver}/${rhcos_release_ver}
   image_url=${image_base}/rhcos-metal.x86_64.raw.gz
   kernel_url=${image_base}/rhcos-live-kernel-x86_64
