@@ -128,8 +128,8 @@ storage:
         backend ocp4_http_ingress_traffic_be
             balance roundrobin
             mode tcp
-            server      worker1 worker1.openshift.local:80 check
-            server      worker2 worker2.openshift.local:80 check
+            server      master1 master1.openshift.local:80 check
+            server      master2 master2.openshift.local:80 check
 
         frontend ocp4_https_ingress_traffic_fe
             bind :443
@@ -140,6 +140,6 @@ storage:
         backend ocp4_https_ingress_traffic_be
             balance roundrobin
             mode tcp
-            server      worker1 worker1.openshift.local:443 check
-            server      worker2 worker2.openshift.local:443 check
+            server      master1 master1.openshift.local:443 check
+            server      master2 master2.openshift.local:443 check
 

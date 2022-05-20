@@ -87,8 +87,8 @@ setup_fcos() {
 }
 
 setup_rhcos() {
-  rhcos_ver=4.10
-  ocp_client_ver=4.10.3
+  rhcos_ver=4.8
+  ocp_client_ver=4.8.39
   rhcos_release_ver=latest
 
   image_base=https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/${rhcos_ver}/${rhcos_release_ver}
@@ -102,10 +102,31 @@ setup_rhcos() {
   ocp_install_url=https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/${ocp_client_ver}/openshift-install-linux.tar.gz
 }
 
+check() {
+    if $(systemctl status ModemManager > /dev/null 2>&1); then
+    echo "Disable ModemManager!"
+    echo "systemctl disable ModemManager"
+    echo "systemctl stop ModemManager"
+    exit 0
+  fi
+
+  if ! $(grep -q 'intel_iommu=on' /proc/cmdline); then
+    echo "Update /proc/cmdline to have, using /boot/grub/grub.cfg"
+    echo "intel_iommu=on"
+    exit 0
+  fi
+
+  if ! $(grep -q 'vfio-pci.ids=1c2c:1000,8086:6f0a,8086:8d31' /proc/cmdline); then
+    echo "Update /proc/cmdline to have, using /boot/grub/grub.cfg"
+    echo "vfio-pci.ids=1c2c:1000,8086:8d31"
+    exit 0
+  fi
+}
+
 start_fileserver() {
   docker rm -f $(docker ps -a -q) > /dev/null 2>&1
   cp $downloads/*.img ${install_dir}
-  docker run -d --name static-file-server --rm  -v ${install_dir}:/web -p ${WEB_PORT}:${WEB_PORT} -u $(id -u):$(id -g) halverneus/static-file-server:latest
+  docker run -d --name static-file-server --rm  -v ${install_dir}:/web -p ${WEB_PORT}:${WEB_PORT} -u $(id -u):$(id -g) docker.io/halverneus/static-file-server:latest
   sleep 1
   curl ${HOST_IP}:8080/master.ign -s > /dev/null
 }
@@ -233,30 +254,9 @@ create_vm() {
     fi
   fi
 
-  if !$(grep -q 'intel_iommu=on pci-stub.ids=8086:0b2b vfio-pci.ids=1c2c:1000,8086:6f0a' /proc/cmdline); then
-    echo "Update /proc/cmdline to have, using /boot/grub/grub.cfg"
-    echo "intel_iommu=on pci-stub.ids=8086:0b2b vfio-pci.ids=1c2c:1000,8086:6f0a"
-    exit 0
-  fi
-
-  if !$(grep -r -q 'options vfio-pci ids=1c2c:1000,0424:2660,8086:1591,1546:01a9,1374:0001,0424:2514' /etc/modprobe.d); then
-    echo "Modprobe needs to be updated, reboot after creating /etc/modprobe.d/vfio.conf with the following information"
-    echo "echo 'options vfio-pci ids=1c2c:1000,0424:2660,8086:1591,1546:01a9,1374:0001,0424:2514' > /etc/modprobe.d/vfio.conf"
-    exit 0
-  fi
   # https://github.com/andre-richter/vfio-pci-bind/blob/master/25-vfio-pci-bind.rules
   # Check for STS2 card, and enable passthrough for USB and Columbiaville
-  if [ ! -z "$(lsusb -d 0424:2660)" ] && [ $hostname = "worker2" ] ; then
-      lspci_args=" --hostdev 0424:2660 "
-      lspci_args=" $lspci_args --hostdev 1546:01a9 "
-      lspci_args=" $lspci_args --hostdev 1374:0001 "
-      for arg in $(lspci -d 8086:1591 | awk '{ print $1 }') ; do
-        lspci_args=" $lspci_args --hostdev $arg,address.domain=0,address.bus=0x2,address.slot=0x0,address.function=$(echo $arg | cut -d . -f 2),address.type='pci'"
-      done
-  elif [ ! -z "$(lsusb -d 0424:2514)" ] && [ $hostname = "worker2" ] ; then
-      lspci_args=" --hostdev 0424:2514 "
-      lspci_args=" $lspci_args --hostdev 1546:01a9 "
-      lspci_args=" $lspci_args --hostdev 1374:0001 "
+  if [ $hostname = "worker2" ] ; then
       for arg in $(lspci -d 8086:1591 | awk '{ print $1 }') ; do
         lspci_args=" $lspci_args --hostdev $arg,address.domain=0,address.bus=0x2,address.slot=0x0,address.function=$(echo $arg | cut -d . -f 2),address.type='pci'"
       done
@@ -282,10 +282,9 @@ if ! $(grep -v '#' /etc/resolv.conf | head -n 1 | grep -q "nameserver 192.168.12
   exit 0
 fi
 
+check
 setup_rhcos
 cleanup
-
-oc get csr -o name
 
 if [ $DESTROY = "yes" ] ; then
   exit 0
@@ -328,31 +327,27 @@ for i in $(seq 1 $WORKERS) ; do
     virsh start "worker$i"
 done
 
-while ! $(nc -v -z -w 1 master$MASTERS.openshift.local 22 > /dev/null 2>&1); do
-  echo "Waiting for master$MASTERS"
+while ! $(nc -v -z -w 1 master1.openshift.local 22 > /dev/null 2>&1); do
+  echo "Waiting for master1"
   sleep 30
 done
-date
 
-while ! $(ssh ${ssh_opts} core@bootstrap.${cluster_name}.${base_domain} "[ -e /opt/openshift/cco-bootstrap.done ]") ; do
+while ! $(ssh ${ssh_opts} bootstrap.${cluster_name}.${base_domain} "[ -e /opt/openshift/cco-bootstrap.done ]") ; do
   echo -n "Waiting for cco-bootstrap.done"
   sleep 30
 done
-date
 
 openshift-install --dir=${install_dir} wait-for bootstrap-complete --log-level debug
 
-while ! $(ssh ${ssh_opts} core@bootstrap.${cluster_name}.${base_domain} "[ -e /opt/openshift/cb-bootstrap.done ]") ; do
+while ! $(ssh ${ssh_opts} bootstrap.${cluster_name}.${base_domain} "[ -e /opt/openshift/cb-bootstrap.done ]") ; do
   echo -n "Waiting for cb-bootstrap.done"
   sleep 30
 done
-date
 
-while ! $(ssh ${ssh_opts} core@bootstrap.${cluster_name}.${base_domain} "[ -e /opt/openshift/.bootkube.done ]") ; do
+while ! $(ssh ${ssh_opts} bootstrap.${cluster_name}.${base_domain} "[ -e /opt/openshift/.bootkube.done ]") ; do
   echo -n "Waiting for .bootkube.done"
   sleep 30
 done
-date
 
 openshift-install gather bootstrap --dir=${install_dir} --bootstrap=bootstrap.openshift.local --master=master1.openshift.local --log-level=debug
 
@@ -361,7 +356,7 @@ virsh undefine bootstrap --remove-all-storage
 
 virsh destroy lb
 sed -i '/bootstrap/d' $BASE/lb.fcc
-virsh start "lb"
+virsh start lb
 while ! $(nc -v -z -w 1 lb.openshift.local 22 > /dev/null 2>&1); do
   echo "Waiting for lb"
   sleep 30
@@ -417,3 +412,12 @@ if ! $(oc describe configs.imageregistry.operator.openshift.io cluster | grep "M
     oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}'
     oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"managementState":"Managed"}}'
 fi
+
+virsh attach-device --file $BASE/files/pci-$(hostname).xml worker2 --config
+virsh destroy worker2
+virsh start worker2
+
+GUEST_IP=192.168.122.9
+GUEST_PORT=6443
+sudo iptables -I FORWARD -o virbr0 -p tcp -d $GUEST_IP --dport $GUEST_PORT -j ACCEPT
+sudo iptables -t nat -I PREROUTING -p tcp --dport $HOST_PORT -j DNAT --to $GUEST_IP:$GUEST_PORT
