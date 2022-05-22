@@ -13,7 +13,7 @@ set -x
 
 BASE=$(dirname $(realpath "${BASH_SOURCE[0]}"))
 WEB_PORT=8080
-HOST_IP=g9.silicom.dk
+HOST_IP=192.168.122.1
 ignition_url=http://${HOST_IP}:${WEB_PORT}
 cluster_name="openshift"
 base_domain="local"
@@ -24,7 +24,7 @@ DISK_GB_WORKER="30"
 install_dir=$BASE/install_dir
 WORKERS="0"
 MASTERS="3"
-ssh_opts="-i $BASE/files/node -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+ssh_opts="-l core -i $BASE/files/node -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 export PATH=${PATH}:$BASE/bin
 export KUBECONFIG=${install_dir}/auth/kubeconfig
 disk_type="raw"
@@ -207,8 +207,7 @@ EOF
 
   openshift-install create ignition-configs --dir=${install_dir}
 
-  podman run -i --rm quay.io/coreos/fcct -p -s <$BASE/files/lb.fcc > ${install_dir}/lb.ign
-	# podman run --rm -ti --volume $(pwd):/srv:z quay.io/ryan_raasch/filetranspiler:latest -i /srv/files/baseconfig.yaml -f /srv/fakeroot --format=yaml --dereference-symlinks | sed 's/^/     /' >> $(pwd)/$(OUTPUT_YAML)
+  docker run -i --rm quay.io/coreos/fcct -p -s <$BASE/files/lb.fcc > ${install_dir}/lb.ign
 
   # The current version of fcct produces ignition 3.2.0 where RHCOS ignition can only handle 3.1.0
   sed -i "s/\"version\": \"3.2.0\"/\"version\": \"3.1.0\"/g" ${install_dir}/lb.ign
@@ -355,7 +354,6 @@ virsh destroy bootstrap
 virsh undefine bootstrap --remove-all-storage
 
 virsh destroy lb
-sed -i '/bootstrap/d' $BASE/lb.fcc
 virsh start lb
 while ! $(nc -v -z -w 1 lb.openshift.local 22 > /dev/null 2>&1); do
   echo "Waiting for lb"
